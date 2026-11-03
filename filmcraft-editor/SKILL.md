@@ -66,6 +66,43 @@ Qualquer ação do editor é um comando com id e parâmetros: você monta, corta
 - Lista completa: `filmcraft-cli export --list-presets`
 - **Não há preset vertical 4K.** Use um preset vertical com `width:2160, height:3840` (verificado), mas o preset **mantém o bitrate de 1080p** (cerca de 10,7 Mbps no teste). Ao mudar o tamanho, informe também `bitrateKbps`: cerca de 40000 para 4K a 24–30 fps e cerca de 60000 para 4K a 50–60 fps.
 
+## Efeitos mais usados hoje (Reels, TikTok, Shorts e vídeo profissional)
+
+Levantamento de nov/2026 em 5 fontes: CapCut (página oficial de transições), Inside Editors, CapsAI, Arsturn (guia de efeitos do Premiere) e Creovanta (plugins que editores usam). Nenhuma traz estatística de uso. A ordem abaixo é por **quantas fontes citam** o efeito, e 2 delas vendem serviço ou plugin, então não é ranking científico. Legenda: ✅ testado no FilmCraft (aplicado e conferido), 🔎 existe no catálogo e os parâmetros foram lidos, mas não foi testado visualmente.
+
+| # | Efeito | Para que serve | Como fazer no FilmCraft |
+|---|---|---|---|
+| 1 | **Rampa de velocidade (velocity)** | acelera para pontuar e volta ao normal no momento-chave; muito usada com música | ✅ `effects.setParam {clip, effect:"time_remap", param:"speed", value, time:<ticks de mídia>, keyframe:true}`: ex. 100 → 25 → 300 em 3 keyframes. Para velocidade constante use `clip.speedDuration {speed, interpolation}` |
+| 2 | **Texto na tela e legendas** | gancho nos 3 primeiros segundos, rótulos de passos, acessibilidade | ✅ `graphics.newText` + `graphics.set`; `captions.add` + `captions.setStyle` (ver passos 10 e 11) |
+| 3 | **Correção e look de cor** | consistência de marca; base antes do look | ✅ `lumetri.applyPreset {name, clips}` (ex. "Golden Dusk"); 🔎 ajuste fino em `lumetri`. Primeiro exposição e balanço de branco, depois o look |
+| 4 | **Zoom (push-in, punch-in)** | ênfase em frase, micro-zoom no talking head, zoom cinematográfico | ✅ keyframes de `scale` em `motion` (passo 7). 🔎 `transform` permite motion blur (shutter angle) |
+| 5 | **Glitch e RGB split** | energia, intro tecnológica, transições rápidas | ✅ `rgb_split` (`amount`, `angle`, `mode` Linear/Radial); 🔎 transição `glitch` (`amount`, `seed`), `vr_digital_glitch`, `vr_chromatic_aberrations` |
+| 6 | **Tremor de câmera (shake)** | impacto na batida, junto com RGB split | ✅ `effects.apply {effect:"camera_shake"}` (`amount`, `rotation`, `zoom`, `frequency`); animar `amount` com keyframes só no instante do impacto |
+| 7 | **Flash branco na batida** | corte seco com impacto | ✅ transição `flash` (`color`, `intensity`): `sequence.applyVideoTransition {clip, edge:"in", effect:"flash", frames:6}` deu quadro totalmente branco no corte. 🔎 `strobe` (`duration`, `period`) para piscadas repetidas |
+| 8 | **Whip / swipe / slide** | esconde o corte sob um movimento de câmera | 🔎 transições `whip` (`direction`, `blur`), `slide`, `push`, `spin_motion`; para esconder um jump cut, termine o plano A e comece o B com movimento na mesma direção |
+| 9 | **Cross zoom / zoom blur** | transição de impacto com zoom | 🔎 transições `cross_zoom` (`strength`, `center`), `zoom_blur`, `radial_blur` |
+| 10 | **Dissolve e fade cinematográfico** | mudança de tempo ou lugar | ✅ `cross_dissolve`, `dip_to_black`, `dip_to_white`; 🔎 `film_dissolve`, `blur_dissolve` |
+| 11 | **Câmera lenta + desfoque (motion blur)** | clima emocional, viagem, estética | 🔎 `time_remap` com `speed` baixa + `directional_blur` (`direction`, `length`) ou `camera_blur` |
+| 12 | **Granulação e vinheta** | textura de filme sem exagero | 🔎 `noise` (`amount` 3–8, `grain_size`) e `vignette` (`amount`, `midpoint`, `feather`). Regra das fontes: sentir, não ver |
+| 13 | **Vazamento de luz e brilho** | clima, transições suaves | 🔎 `light_leaks` (`intensity`, `direction`), transição `light_leak`, `wonder_glow`, `glint` |
+| 14 | **Limpeza e polimento de áudio** | diálogo claro vale mais que efeito visual | ✅ `essentialSound.setType` + `autoMatch` + `generateDucking`; 🔎 filtros `denoise`, `dehummer`, `deesser`, `speech_enhance`, `vocal_enhancer`, `dynamics`, `hard_limiter` |
+| 15 | **Sound design** (whoosh, impacto, riser) | dá peso ao corte e à revelação | o catálogo de comandos (v0.17.0) não tem biblioteca de sons: importe os arquivos de áudio do usuário e posicione com `timeline.place` na trilha A2 ou acima, alinhando ao corte |
+| 16 | **Sincronia com a batida (beat sync)** | cortes na música | marque as batidas com `markers.add` (ou peça os tempos) e posicione os cortes nesses instantes com `timeline.razor`. O catálogo (v0.17.0) não tem detecção automática de batida |
+| 17 | **Estabilização** | salva imagem tremida | 🔎 `warp_stabilizer`. Estabilize **antes** de mudar a velocidade do clipe |
+| 18 | **Barras de cinema (letterbox)** | visual de cinema em 16:9 | 🔎 `crop` (`top`/`bottom` ~10–12%); em vertical raramente se usa |
+| 19 | **Chroma key (fundo verde)** | trocar o fundo | 🔎 `ultra_key`, `color_key`, `luma_key` |
+| 20 | **Texto dentro de vídeo / máscara** | título com vídeo dentro das letras | 🔎 `track_matte` (o texto vai na trilha acima do vídeo) |
+| 21 | **Transformação antes/depois** | troca de roupa, antes/depois | corte seco + máscara (`masks.*`) ou `whip`/`directional_blur` na troca; mantenha o balanço de branco igual nos dois planos |
+| 22 | **Reenquadramento automático** | 16:9 → 9:16 acompanhando o rosto | 🔎 `auto_reframe` |
+
+**Não se aplicam a uma edição no editor** (são filtros ao vivo da câmera do Instagram): Time Warp Scan, filtros de maquiagem AR e jogos interativos. Se o usuário pedir, explique que são gravados dentro do app do Instagram.
+
+**Receita de "edit viral" citada pelas fontes** (🔎 junta peças já testadas): cortes na batida + `rgb_split` e `camera_shake` só nos quadros da transição + 1 quadro de `flash` branco na batida + um único look de cor em todos os clipes.
+
+**Excessos que as fontes apontam como erro:** transições chamativas em todo corte (no máximo 1 transição forte nos 5 primeiros segundos; para o resto, corte seco com movimento), LUT forte demais (aplique a 20–40% e confira o tom de pele), texto pequeno ou com muita informação (gancho de 6–8 palavras, longe da interface do app) e áudio ruim. A correção quase sempre é **tirar** efeito, não adicionar.
+
+Fontes: capcut.com/help/capcut-transitions · insideeditors.com/instagram-video-editing-effects · capsai.co/blogs/top-trending-effects-and-filters-for-instagram-reels · arsturn.com/blog/the-best-adobe-premiere-effects-for-your-next-video · creovanta.com/blog/top-8-premiere-pro-plugins-editors-actually-use-2026
+
 ## Padrões de edição (ajuste quando o usuário disser outra coisa)
 
 | Item | Padrão |
